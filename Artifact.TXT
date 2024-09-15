@@ -1,0 +1,1245 @@
+
+#Importing Libraries and Data
+
+#!pip install numpy   # remove the hash(#) run the cell and comment back once installations id done. do same for the library with asterick
+#!pip install pandas matplotlib 
+
+#!pip install seaborn
+
+#!pip install imbalanced-learn
+
+# library files
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+import warnings
+warnings.filterwarnings("ignore")
+warnings.filterwarnings("ignore", category=DeprecationWarning)
+
+%matplotlib inline
+
+
+import pandas as pd
+
+# Load the dataset using pandas
+data = pd.read_csv('creditcard.csv')
+
+# Display basic information about the DataFrame
+print("Pandas DataFrame Information:")
+print(data.info())
+
+# Count the number of rows where Class == 1 (fraudulent transactions)
+fraud_count = data[data['Class'] == 1].shape[0]
+print(f"Number of fraudulent transactions (Class == 1) in DataFrame: {fraud_count}")
+
+
+# this confirms the download is complete
+import csv
+
+# Initialize counters
+row_count = 0
+fraud_count_csv = 0
+
+# Read the CSV file directly
+with open('creditcard.csv', mode='r') as file:
+    csv_reader = csv.reader(file)
+
+    # Read the header
+    header = next(csv_reader)
+    print(f"Header from CSV file: {header}")
+
+    # Iterate through rows
+    for row in csv_reader:
+        row_count += 1
+        if row[-1] == '1':  # Assuming 'Class' is the last column in the CSV
+            fraud_count_csv += 1
+
+print(f"Total rows in the CSV file: {row_count}")
+print(f"Number of fraudulent transactions (Class == 1) in CSV: {fraud_count_csv}")
+
+
+
+# Check if the row count matches
+if data.shape[0] == row_count:
+    print("Row count matches between CSV file and DataFrame.")
+else:
+    print("Row count mismatch!")
+
+# Check if the fraud count matches
+if fraud_count == fraud_count_csv:
+    print("Fraud count matches between CSV file and DataFrame.")
+else:
+    print("Fraud count mismatch!")
+
+# Optional: Compare other statistics (e.g., means, medians)
+print("\nComparison of 'Amount' column statistics:")
+print("DataFrame 'Amount' mean:", data['Amount'].mean())
+print("DataFrame 'Amount' median:", data['Amount'].median())
+
+
+# Filter the data for fraudulent transactions (Class == 1)
+fraud = data[data['Class'] == 1]
+
+# Display the first 5 rows of fraudulent transactions
+print("First 5 rows of fraudulent transactions:")
+print(fraud.head())
+
+# Display the last 5 rows of fraudulent transactions
+print("\nLast 5 rows of fraudulent transactions:")
+print(fraud.tail())
+
+
+# Count the number of rows and columns
+num_rows, num_columns = data.shape
+
+# Display the counts
+print(f"The dataset contains {num_rows} rows and {num_columns} columns.")
+
+
+# Get a summary of the dataset
+data.info()
+
+
+# Generate summary statistics
+data.describe()
+
+# If missing values were already filled during cleaning, no need to fill again
+# Check for missing values after handling
+print("Missing values after cleaning:")
+print(data.isnull().sum())
+
+
+
+
+# check for duplicates in the dataframe
+
+import pandas as pd
+
+# Assuming 'data' is your DataFrame containing the dataset
+
+# Step 1: Check for duplicate rows
+duplicates = data.duplicated()
+
+# Count the number of duplicate rows
+num_duplicates = duplicates.sum()
+print(f"Number of duplicate rows in the dataset: {num_duplicates}")
+
+# Step 2: Display duplicate rows (if any)
+if num_duplicates > 0:
+    print("\nDuplicate rows:")
+    print(data[duplicates])
+
+# Step 3: Analyze duplicates by Class
+# Check the distribution of 'Class' among the duplicates
+fraudulent_duplicates = data[duplicates & (data['Class'] == 1)]
+non_fraudulent_duplicates = data[duplicates & (data['Class'] == 0)]
+
+print(f"\nNumber of duplicate fraudulent transactions (Class == 1): {fraudulent_duplicates.shape[0]}")
+print(f"Number of duplicate non-fraudulent transactions (Class == 0): {non_fraudulent_duplicates.shape[0]}")
+
+# Step 4: Check if retaining one of the duplicates keeps fraud records intact
+if not fraudulent_duplicates.empty:
+    print("\nFirst few duplicate fraudulent records:")
+    print(fraudulent_duplicates.head())
+
+# Step 5: Separate the data into fraudulent and non-fraudulent
+fraudulent_data = data[data['Class'] == 1]
+non_fraudulent_data = data[data['Class'] == 0]
+
+# Step 6: Handle duplicates for both classes by keeping the first occurrence
+# - For fraudulent transactions, keep the first occurrence of each duplicate
+fraudulent_data_cleaned = fraudulent_data.drop_duplicates(keep='first')
+
+# - For non-fraudulent transactions, also keep the first occurrence of each duplicate
+non_fraudulent_data_cleaned = non_fraudulent_data.drop_duplicates(keep='first')
+
+# Step 7: Combine the cleaned data back together
+data_cleaned = pd.concat([fraudulent_data_cleaned, non_fraudulent_data_cleaned], axis=0)
+
+# Step 8: Check the number of rows before and after dropping duplicates
+print(f"\nNumber of rows before dropping duplicates: {data.shape[0]}")
+print(f"Number of rows after dropping duplicates: {data_cleaned.shape[0]}")
+
+# Step 9: Check the number of fraudulent transactions to ensure none are lost
+fraudulent_count = data_cleaned[data_cleaned['Class'] == 1].shape[0]
+print(f"Number of fraudulent transactions (Class == 1) after dropping duplicates: {fraudulent_count}")
+
+# Check the number of non-fraudulent transactions to ensure minimal loss
+non_fraudulent_count = data_cleaned[data_cleaned['Class'] == 0].shape[0]
+print(f"Number of non-fraudulent transactions (Class == 0) after dropping duplicates: {non_fraudulent_count}")
+
+# Save the cleaned dataset if needed
+data_cleaned.to_csv('creditcard_cleaned.csv', index=False)
+
+# Optional: Display the first few rows of cleaned data
+print("\nFirst few rows of the cleaned dataset:")
+print(data_cleaned.head())
+
+
+
+import pandas as pd
+import numpy as np
+
+# Load the dataset
+# data_cleaned = pd.read_csv('credit_card.csv')
+
+# Ensure 'TransactionDate' is in datetime format
+data_cleaned['TransactionDate'] = pd.to_datetime(data_cleaned['Time'], errors='coerce')
+
+# Check for conversion issues
+if data_cleaned['TransactionDate'].isnull().any():
+    print("Warning: Some dates could not be converted and are now NaT (Not a Time).")
+
+# 1. Log Transformation of Transaction Amount
+data_cleaned['LogAmount'] = np.log1p(data_cleaned['Amount'])
+
+# 2. Binning Transaction Amount
+bins = [0, 50, 100, 200, np.inf]
+labels = ['Low', 'Medium', 'High', 'Very High']
+data_cleaned['AmountBin'] = pd.cut(data_cleaned['Amount'], bins=bins, labels=labels)
+
+# 3. Time-Based Features
+# Check if 'TransactionDate' conversion was successful
+if data_cleaned['TransactionDate'].dtype == 'datetime64[ns]':
+    data_cleaned['TransactionDay'] = data_cleaned['TransactionDate'].dt.day
+    data_cleaned['TransactionMonth'] = data_cleaned['TransactionDate'].dt.month
+    data_cleaned['TransactionYear'] = data_cleaned['TransactionDate'].dt.year
+
+    # Calculate Time Since Last Transaction (example)
+    data_cleaned.sort_values(by='TransactionDate', inplace=True)
+    data_cleaned['TimeSinceLastTransaction'] = data_cleaned['TransactionDate'].diff().dt.days.fillna(0)
+else:
+    print("Error: 'TransactionDate' column is not in datetime format.")
+
+# 4. Aggregated Features
+monthly_spend = data_cleaned.groupby(['TransactionYear', 'TransactionMonth'])['Amount'].sum().reset_index()
+monthly_spend.rename(columns={'Amount': 'MonthlySpend'}, inplace=True)
+
+# Merge aggregated features back to the original dataframe
+data_cleaned = data_cleaned.merge(monthly_spend, on=['TransactionYear', 'TransactionMonth'], how='left')
+
+# 5. Categorical Encodings (one-hot encoding for 'MerchantCategory')
+if 'MerchantCategory' in data_cleaned.columns:
+    data_cleaned = pd.get_dummies(data_cleaned, columns=['MerchantCategory'], prefix='Merchant')
+else:
+    print("Column 'MerchantCategory' not found in the DataFrame.")
+
+# Display the updated dataframe
+print(data_cleaned.head())
+
+
+# You can similarly compute statistics directly from the CSV file if needed
+
+
+
+
+#performing data exploration
+
+import pandas as pd
+import numpy as np
+
+# Load the dataset
+# data_cleaned = pd.read_csv('credit_card.csv')
+
+# Ensure 'TransactionDate' is in datetime format
+data_cleaned['TransactionDate'] = pd.to_datetime(data_cleaned['Time'], errors='coerce')
+
+# Check for conversion issues
+if data_cleaned['TransactionDate'].isnull().any():
+    print("Warning: Some dates could not be converted and are now NaT (Not a Time).")
+
+# Print columns to check if 'Amount' exists
+print("Columns in data_cleaned before transformations:", data_cleaned.columns)
+
+# 1. Log Transformation of Transaction Amount
+if 'Amount' in data_cleaned.columns:
+    data_cleaned['LogTransactionAmount'] = np.log1p(data_cleaned['Amount'])
+else:
+    print("Column 'Amount' not found in the DataFrame.")
+
+# 2. Binning Transaction Amount
+if 'Amount' in data_cleaned.columns:
+    bins = [0, 50, 100, 200, np.inf]
+    labels = ['Low', 'Medium', 'High', 'Very High']
+    data_cleaned['AmountBin'] = pd.cut(data_cleaned['Amount'], bins=bins, labels=labels)
+else:
+    print("Column 'Amount' not found in the DataFrame for binning.")
+
+# 3. Time-Based Features
+data_cleaned['TransactionDay'] = data_cleaned['TransactionDate'].dt.day
+data_cleaned['TransactionMonth'] = data_cleaned['TransactionDate'].dt.month
+data_cleaned['TransactionYear'] = data_cleaned['TransactionDate'].dt.year
+
+# Calculate Time Since Last Transaction
+data_cleaned.sort_values(by='TransactionDate', inplace=True)
+data_cleaned['TimeSinceLastTransaction'] = data_cleaned['TransactionDate'].diff().dt.days.fillna(0)
+
+# 4. Aggregated Features
+if 'Amount' in data_cleaned.columns:
+    monthly_spend = data_cleaned.groupby(['TransactionYear', 'TransactionMonth'])['Amount'].sum().reset_index()
+    monthly_spend.rename(columns={'Amount': 'MonthlySpend'}, inplace=True)
+
+    # Print columns to check for conflicts
+    print("Columns in data_cleaned before merge:", data_cleaned.columns)
+    print("Columns in monthly_spend:", monthly_spend.columns)
+
+    # Ensure no column conflicts before merging
+    if 'MonthlySpend' in data_cleaned.columns:
+        data_cleaned.rename(columns={'MonthlySpend': 'PreviousMonthlySpend'}, inplace=True)
+
+    # Merge aggregated features back to the original dataframe
+    data_cleaned = data_cleaned.merge(monthly_spend, on=['TransactionYear', 'TransactionMonth'], how='left')
+else:
+    print("Column 'Amount' not found in the DataFrame for aggregation.")
+
+# 5. Categorical Encodings (one-hot encoding for 'MerchantCategory')
+# Check if 'MerchantCategory' is present before encoding
+if 'MerchantCategory' in data_cleaned.columns:
+    data_cleaned = pd.get_dummies(data_cleaned, columns=['MerchantCategory'], prefix='Merchant')
+else:
+    print("Column 'MerchantCategory' not found in the DataFrame.")
+
+# Display the updated dataframe
+print(data_cleaned.head())
+
+
+#### 1. Exploratory Data Analysis (EDA)
+Visualizations: Create plots to explore distributions, relationships, and patterns. For example, use histograms to visualize transaction amounts, or bar plots to see the frequency of different merchant categories.
+Summary Statistics: Compute summary statistics like mean, median, standard deviation, and counts to understand the data better.
+
+
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# Check columns in data_cleaned before plotting
+print("Columns in data_cleaned:", data_cleaned.columns)
+
+# Histogram of transaction amounts
+if 'Amount' in data_cleaned.columns:
+    plt.hist(data_cleaned['Amount'], bins=30, edgecolor='k')
+    plt.title('Distribution of Transaction Amounts')
+    plt.xlabel('Amount')
+    plt.ylabel('Frequency')
+    plt.show()
+else:
+    print("Column 'Amount' not found in data_cleaned.")
+
+# Bar plot of amount bins
+if 'AmountBin' in data_cleaned.columns:
+    sns.countplot(data=data_cleaned, x='AmountBin')
+    plt.title('Number of Transactions by Amount Bin')
+    plt.xlabel('Amount Bin')
+    plt.ylabel('Count')
+    plt.show()
+else:
+    print("Column 'AmountBin' not found in data_cleaned.")
+
+
+
+
+#### 2. Feature Selection and Engineering
+Feature Importance: Evaluate which features are most important for predicting the target variable using algorithms like Random Forests or XGBoost.
+Correlation Analysis: Examine correlations between features to identify redundant or highly correlated features.
+
+
+# Correlation matrix
+correlation_matrix = data.corr()
+sns.heatmap(correlation_matrix, annot=True, cmap='coolwarm')
+plt.title('Correlation Matrix')
+plt.show()
+
+
+
+# Pairplot for a subset of variables (e.g., 'V1', 'V2', 'V3', 'V4', and 'Class')
+sns.pairplot(data_cleaned[['V1', 'V2', 'V3', 'V4', 'Class']], hue='Class', plot_kws={'alpha':0.3})
+plt.show()
+
+
+# Convert 'Time' column to datetime format by adding it to a reference date
+# Assuming 'Time' represents seconds since the first transaction
+reference_date = pd.Timestamp('2013-01-01')  # Example reference date (Unix epoch)
+data_cleaned['Time'] = reference_date + pd.to_timedelta(data['Time'], unit='s')
+
+# Verify the conversion
+print(data_cleaned['Time'].head())
+print(data_cleaned.info())
+
+
+data_cleaned.head()
+
+
+# Filter the data for fraudulent transactions (Class = 1)
+fraud = data_cleaned[data_cleaned['Class'] == 1]
+
+# Display the last 5 rows of fraudulent transactions
+fraud.tail(5)
+
+
+# Filter the data for normal transactions (Class = 0)
+normal = data_cleaned[data_cleaned['Class'] == 0]
+
+# Display the last 5 rows of normal transactions
+normal.tail(5)
+
+## Data Visualization
+
+# -------------------------
+# 1. Univariate Analysis
+# -------------------------
+# Transaction Amount (Amount) Distribution
+# Distribution of the Amount column
+plt.figure(figsize=(10, 5))
+sns.histplot(data_cleaned['Amount'], bins=30, kde=True)
+plt.title('Distribution of Transaction Amounts')
+plt.xlabel('Amount')
+plt.ylabel('Frequency')
+plt.show()
+
+
+
+#---------------------------------
+# a. Distribution of the Time column
+#---------------------------------
+plt.figure(figsize=(10, 5))
+sns.histplot(data_cleaned['Time'], bins=30, kde=True)
+plt.title('Distribution of Transaction Times')
+plt.xlabel('Time')
+plt.ylabel('Frequency')
+plt.show()
+
+
+
+#------------------------------------------------------
+# b. Distribution of the Class column (target variable)
+#------------------------------------------------------
+plt.figure(figsize=(6, 6))
+sns.countplot(x='Class', data=data_cleaned)
+plt.title('Distribution of the Class (Fraud vs. Non-Fraud)')
+plt.xlabel('Class')
+plt.ylabel('Frequency')
+plt.show()
+
+
+#------------------------------------
+# c. Pie chart for Class distribution
+#------------------------------------
+plt.figure(figsize=(6, 6))
+data_cleaned['Class'].value_counts().plot.pie(autopct="%1.1f%%", colors=['lightblue', 'lightcoral'], labels=['Non-Fraud (0)', 'Fraud (1)'])
+plt.title('Class Distribution (Fraud vs. Non-Fraud)')
+plt.ylabel('')
+plt.show()
+
+
+# -------------------------
+# 2. Bivariate Analysis
+# -------------------------
+# Scatter plot of Amount vs. Time
+plt.figure(figsize=(10, 6))
+sns.scatterplot(x='Time', y='Amount', hue='Class', data=data_cleaned, alpha=0.6, palette=['blue', 'red'])
+plt.title('Scatter plot of Amount vs. Time')
+plt.xlabel('Time')
+plt.ylabel('Amount')
+plt.show()
+
+
+
+# Correlation Analysis
+
+# ----------------------
+# b. Correlation matrix
+# ----------------------
+plt.figure(figsize=(12, 8))
+corr = data_cleaned.corr()
+sns.heatmap(corr, annot=False, cmap='coolwarm', linewidths=0.5)
+plt.title('Correlation Matrix of Credit Card Fraud Dataset')
+plt.show()
+
+
+# ------------------------------
+# a. Box plot of Amount by Class
+# ------------------------------
+# Box plot of Amount by Class with distinct colors for each class
+
+# Ensure the 'Class' column is converted to string to match the palette keys
+# import pandas as pd
+# import seaborn as sns
+# import matplotlib.pyplot as plt
+
+# Load your data into the DataFrame 'data'
+# data = pd.read_csv('credit_card.csv')  # Uncomment and adjust as needed
+
+# Ensure the 'Class' column is converted to string to match the palette keys
+data_cleaned['Class'] = data_cleaned['Class'].astype(str)
+
+# Verify unique values in 'Class' column
+unique_classes = data_cleaned['Class'].unique()
+
+# Create a palette with keys matching the unique values
+# Adjust colors if needed; here we assume binary classes
+palette = {cls: color for cls, color in zip(unique_classes, ['lightblue', 'salmon'])}
+
+# Plot
+plt.figure(figsize=(10, 6))
+sns.boxplot(x='Class', y='Amount', data=data_cleaned, palette=palette)
+plt.title('Box Plot of Amount by Class')
+plt.xlabel('Class')
+plt.ylabel('Amount')
+plt.show()
+
+
+
+# ----------------------------------------------------------
+# c. Pair plot of selected features to explore relationships
+# ----------------------------------------------------------
+# Pair plot of selected features to explore relationships
+sns.pairplot(data_cleaned[['Time', 'Amount', 'Class']], hue='Class', palette=['blue', 'red'])
+plt.show()
+
+
+sns.distplot(fraud.Time, color='r')
+plt.title("Time feature distribution over Fraud Transaction")
+plt.xlabel("Time")
+plt.ylabel("Frequency")
+
+
+
+sns.distplot(normal.Amount, color='g')
+plt.title("Amount feature distribution over Normal Transaction")
+plt.xlabel("Amount")
+plt.ylabel("Frequency")
+
+
+
+sns.distplot(fraud.Amount, color='r')
+plt.title("Amount feature distribution over Fraud Transaction")
+plt.xlabel("Amount")
+plt.ylabel("Frequency")
+
+
+
+f, (ax1, ax2) = plt.subplots(2, 1, sharex=True)
+f.suptitle('Amount per transaction by class')
+bins = 50
+
+ax1.hist(fraud.Amount, bins = bins, color = 'r')
+ax1.set_title('Fraud')
+ax1.grid(color='k', linestyle='-', linewidth=0.1)
+
+ax2.hist(normal.Amount, bins = bins, color = 'g')
+ax2.set_title('Normal')
+ax2.grid(color='k', linestyle='-', linewidth=0.1)
+
+plt.xlabel('Amount ($)')
+plt.ylabel('Number of Transactions')
+plt.xlim((0, 20000))
+plt.yscale('log')
+plt.show()
+
+
+f, (ax1, ax2) = plt.subplots(2, 1, sharex=True)
+f.suptitle('Time of transaction vs Amount by class')
+
+ax1.scatter(fraud.Time, fraud.Amount, color = 'r')
+ax1.set_title('Fraud')
+ax1.grid(color='k', linestyle='-', linewidth=0.1)
+
+
+ax2.scatter(normal.Time, normal.Amount, color = 'g')
+ax2.set_title('Normal')
+ax2.grid(color='k', linestyle='-', linewidth=0.1)
+
+
+plt.xlabel('Time (in Seconds)')
+plt.ylabel('Amount')
+plt.show()
+
+
+# Perform SMOTE for class imbalance
+import pandas as pd
+from imblearn.over_sampling import SMOTE
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from collections import Counter
+
+# # Load the cleaned dataset
+# data_cleaned = pd.read_csv('creditcard_cleaned.csv')
+
+# Ensure 'Time' column is excluded when applying StandardScaler (assuming it's in datetime format)
+# Separate features (X) and target variable (y)
+X = data_cleaned.drop(['Class', 'Time'], axis=1)  # Exclude 'Time' column
+y = data_cleaned['Class']
+
+# Check original class distribution
+print("Original class distribution:")
+print(Counter(y))
+
+# Step 1: Split the dataset into training and test sets (to avoid data leakage)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
+
+# Step 2: Standardize the features (important for many ML models)
+scaler = StandardScaler()
+X_train_scaled = scaler.fit_transform(X_train)
+X_test_scaled = scaler.transform(X_test)
+
+# Step 3: Apply SMOTE to the training data only
+smote = SMOTE(sampling_strategy='minority',random_state=42)
+X_train_smote, y_train_smote = smote.fit_resample(X_train_scaled, y_train)
+
+# Check class distribution after applying SMOTE
+print("\nClass distribution after applying SMOTE:")
+print(Counter(y_train_smote))
+
+# Optional: Convert back to DataFrame for further analysis or model training
+X_train_smote_df = pd.DataFrame(X_train_smote, columns=X.columns)
+y_train_smote_df = pd.DataFrame(y_train_smote, columns=['Class'])
+
+# Combine for a complete balanced dataset for model training
+data_smote = pd.concat([X_train_smote_df, y_train_smote_df], axis=1)
+
+# Save the balanced dataset for future use if needed
+data_smote.to_csv('creditcard_smote.csv', index=False)
+
+# Display the first few rows of the SMOTE-applied dataset
+print("\nFirst few rows of the balanced dataset after SMOTE:")
+print(data_smote.head())
+
+
+
+
+
+# use a dictionary to keep Regression + Decision Tree + Naive Bayes + MLP
+
+# Logistic Regression + Decision Tree + Naive Bayes + MLP
+import time
+from sklearn.linear_model import LogisticRegression
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.naive_bayes import GaussianNB
+from sklearn.neural_network import MLPClassifier
+from sklearn.model_selection import RandomizedSearchCV
+from sklearn.metrics import accuracy_score, recall_score, f1_score, confusion_matrix, roc_auc_score, classification_report
+import pickle
+
+# Dictionary to store results
+model_scores_lr_nb_dt_mlp = {}
+
+# Logistic Regression with RandomizedSearchCV
+print("\nRunning model: Logistic Regression with RandomizedSearchCV")
+
+start_time = time.time()
+
+# Initialize Logistic Regression
+lr = LogisticRegression(random_state=42)
+# Define hyperparameters to search
+param_dist = {'C': [0.01, 0.1, 1, 10, 100], 'solver': ['liblinear', 'lbfgs', 'sag', 'saga']}
+# Setup RandomizedSearchCV
+random_search_lr = RandomizedSearchCV(lr, param_distributions=param_dist, n_iter=10, cv=5, scoring='accuracy', random_state=42, n_jobs=-1)
+# Fit the model
+random_search_lr.fit(X_train_smote, y_train_smote)
+y_pred_lr = random_search_lr.predict(X_test)
+end_time = time.time()
+
+# Ensure y_test and y_pred_lr are both strings to avoid type mismatch
+y_test = y_test.astype(str)
+y_pred_lr = y_pred_lr.astype(str)
+
+# Check if '1' is present in both y_test and y_pred_lr
+if '1' not in y_test or '1' not in y_pred_lr:
+    recall_lr = recall_score(y_test, y_pred_lr, average='macro')
+    f1_lr = f1_score(y_test, y_pred_lr, average='macro')
+else:
+    recall_lr = recall_score(y_test, y_pred_lr, pos_label='1', average='binary')
+    f1_lr = f1_score(y_test, y_pred_lr, pos_label='1', average='binary')
+
+# Calculate other metrics
+accuracy_lr = accuracy_score(y_test, y_pred_lr)
+conf_matrix_lr = confusion_matrix(y_test, y_pred_lr)
+auc_lr = roc_auc_score(y_test, random_search_lr.predict_proba(X_test)[:, 1])
+class_report_lr = classification_report(y_test, y_pred_lr)
+
+# Store the scores
+model_scores_lr_nb_dt_mlp['Logistic Regression (RandomizedSearchCV)'] = {
+    'Accuracy': accuracy_lr,
+    'Recall': recall_lr,
+    'F1 Score': f1_lr,
+    'AUC Score': auc_lr,
+    'Confusion Matrix': conf_matrix_lr,
+    'Classification Report': class_report_lr,
+    'Time Taken (seconds)': end_time - start_time
+}
+
+# Display the results
+print(f"Accuracy: {accuracy_lr:.4f}")
+print(f"Recall: {recall_lr:.4f}")
+print(f"F1 Score: {f1_lr:.4f}")
+print(f"AUC Score: {auc_lr:.4f}")
+print(f"Confusion Matrix:\n{conf_matrix_lr}")
+print(f"Classification Report:\n{class_report_lr}")
+print(f"Time Taken (seconds): {end_time - start_time:.4f}")
+
+# Repeat similar process for Decision Tree, Naive Bayes, MLP classifiers
+# Decision Tree, Naive Bayes, and MLP code is omitted here for brevity.
+# Store all results in `model_scores_lr_nb_dt_mlp`
+
+# Save the dictionary to a file
+with open('model_scores_lr_nb_dt_mlp.pkl', 'wb') as f:
+    pickle.dump(model_scores_lr_nb_dt_mlp, f)
+	
+	
+	
+
+
+
+## run Decision	tree
+
+
+import time
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.metrics import accuracy_score, recall_score, f1_score, confusion_matrix, roc_auc_score, classification_report
+from sklearn.model_selection import RandomizedSearchCV
+
+# # Dictionary to store results
+# model_scores = {}
+
+# Decision Tree Classifier with RandomizedSearchCV
+print("\nRunning model: Decision Tree Classifier with RandomizedSearchCV")
+
+start_time = time.time()
+
+# Initialize Decision Tree Classifier
+dt = DecisionTreeClassifier(random_state=42)
+
+# Define hyperparameters to search
+param_dist = {
+    'max_depth': [None, 10, 20, 30],              # Maximum depth of the tree
+    'min_samples_split': [2, 5, 10, 15],          # Minimum number of samples required to split an internal node
+    'min_samples_leaf': [1, 2, 4, 6, 8],          # Minimum number of samples required to be at a leaf node
+    'criterion': ['gini', 'entropy']              # Criterion for splitting
+}
+
+# Setup RandomizedSearchCV
+random_search_dt = RandomizedSearchCV(
+    dt, param_distributions=param_dist, n_iter=10, cv=5, scoring='accuracy', random_state=42, n_jobs=-1
+)
+
+# Fit the model
+random_search_dt.fit(X_train_smote, y_train_smote)
+y_pred_dt = random_search_dt.predict(X_test)
+end_time = time.time()
+
+# Ensure y_test and y_pred_dt are both strings to avoid type mismatch
+y_test = y_test.astype(str)
+y_pred_dt = y_pred_dt.astype(str)
+
+# Debug: Check unique values in y_test and y_pred_dt
+print("Unique values in y_test:", set(y_test))
+print("Unique values in y_pred_dt:", set(y_pred_dt))
+
+# Check if '1' is present in both y_test and y_pred_dt
+if '1' not in y_test or '1' not in y_pred_dt:
+    print("Warning: '1' is not present in one of the datasets, using 'macro' average.")
+    # Calculate metrics using macro average
+    recall_dt = recall_score(y_test, y_pred_dt, average='macro')
+    f1_dt = f1_score(y_test, y_pred_dt, average='macro')
+else:
+    # Calculate metrics using binary average
+    recall_dt = recall_score(y_test, y_pred_dt, pos_label='1', average='binary')
+    f1_dt = f1_score(y_test, y_pred_dt, pos_label='1', average='binary')
+
+# Calculate other metrics
+accuracy_dt = accuracy_score(y_test, y_pred_dt)
+conf_matrix_dt = confusion_matrix(y_test, y_pred_dt)  # Confusion matrix does not need pos_label or average
+auc_dt = roc_auc_score(y_test, random_search_dt.predict_proba(X_test)[:, 1])
+class_report_dt = classification_report(y_test, y_pred_dt)
+
+# Store the scores
+#model_scores['Decision Tree (RandomizedSearchCV)'] = {
+model_scores_lr_nb_dt_mlp['Decision Tree (RandomizedSearchCV)'] = {
+    'Accuracy': accuracy_dt,
+    'Recall': recall_dt,
+    'F1 Score': f1_dt,
+    'AUC Score': auc_dt,
+    'Confusion Matrix': conf_matrix_dt,
+    'Classification Report': class_report_dt,
+    'Time Taken (seconds)': end_time - start_time
+}
+
+# Display the results
+print(f"Accuracy: {accuracy_dt:.4f}")
+print(f"Recall: {recall_dt:.4f}")
+print(f"F1 Score: {f1_dt:.4f}")
+print(f"AUC Score: {auc_dt:.4f}")
+print(f"Confusion Matrix:\n{conf_matrix_dt}")
+print(f"Classification Report:\n{class_report_dt}")
+print(f"Time Taken (seconds): {end_time - start_time:.4f}")
+
+# Save the dictionary to a file
+with open('model_scores_lr_nb_dt_mlp.pkl', 'wb') as f:
+    pickle.dump(model_scores_lr_nb_dt_mlp, f)
+	
+	
+
+### Implement Naive Baye
+
+
+import time
+from sklearn.naive_bayes import GaussianNB
+from sklearn.metrics import accuracy_score, recall_score, f1_score, confusion_matrix, roc_auc_score, classification_report
+
+# # Dictionary to store results
+# model_scores = {}
+
+# Naive Bayes
+print("\nRunning model: Naive Bayes")
+
+start_time = time.time()
+
+# Initialize Naive Bayes
+nb = GaussianNB()
+
+# Fit the model
+nb.fit(X_train_smote, y_train_smote)
+y_pred_nb = nb.predict(X_test)
+end_time = time.time()
+
+# Ensure y_test and y_pred_nb are both strings to avoid type mismatch
+y_test = y_test.astype(str)
+y_pred_nb = y_pred_nb.astype(str)
+
+# Debug: Check unique values in y_test and y_pred_nb
+print("Unique values in y_test:", set(y_test))
+print("Unique values in y_pred_nb:", set(y_pred_nb))
+
+# Check if '1' is present in both y_test and y_pred_nb
+if '1' not in y_test or '1' not in y_pred_nb:
+    print("Warning: '1' is not present in one of the datasets, using 'macro' average.")
+    # Calculate metrics using macro average
+    recall_nb = recall_score(y_test, y_pred_nb, average='macro')
+    f1_nb = f1_score(y_test, y_pred_nb, average='macro')
+else:
+    # Calculate metrics using binary average
+    recall_nb = recall_score(y_test, y_pred_nb, pos_label='1', average='binary')
+    f1_nb = f1_score(y_test, y_pred_nb, pos_label='1', average='binary')
+
+# Calculate other metrics
+accuracy_nb = accuracy_score(y_test, y_pred_nb)
+conf_matrix_nb = confusion_matrix(y_test, y_pred_nb)  # Confusion matrix does not need pos_label or average
+auc_nb = roc_auc_score(y_test, nb.predict_proba(X_test)[:, 1])
+class_report_nb = classification_report(y_test, y_pred_nb)
+
+# Store the scores
+#model_scores['Naive Bayes'] = {
+model_scores_lr_nb_dt_mlp['Naive Bayes'] = {
+    'Accuracy': accuracy_nb,
+    'Recall': recall_nb,
+    'F1 Score': f1_nb,
+    'AUC Score': auc_nb,
+    'Confusion Matrix': conf_matrix_nb,
+    'Classification Report': class_report_nb,
+    'Time Taken (seconds)': end_time - start_time
+}
+
+# Display the results
+print(f"Accuracy: {accuracy_nb:.4f}")
+print(f"Recall: {recall_nb:.4f}")
+print(f"F1 Score: {f1_nb:.4f}")
+print(f"AUC Score: {auc_nb:.4f}")
+print(f"Confusion Matrix:\n{conf_matrix_nb}")
+print(f"Classification Report:\n{class_report_nb}")
+print(f"Time Taken (seconds): {end_time - start_time:.4f}")
+
+
+# Save the dictionary to a file
+with open('model_scores_lr_nb_dt_mlp.pkl', 'wb') as f:
+    pickle.dump(model_scores_lr_nb_dt_mlp, f)
+	
+	
+# Load and combine all model scores
+combined_model_scores = load_model_scores(file_paths)
+
+# Extract metrics for plotting
+Prediction_Accuracy = {}
+Prediction_Recall = {}
+Prediction_AUC = {}
+Prediction_f1_score = {}
+
+
+# Extract metrics from combined_model_scores
+for model_name, metrics in combined_model_scores.items():
+    Prediction_Accuracy[model_name] = metrics.get('Accuracy', None)
+    Prediction_Recall[model_name] = metrics.get('Recall', None)
+    Prediction_AUC[model_name] = metrics.get('AUC Score', None)
+    Prediction_f1_score[model_name] = metrics.get('F1 Score', None)
+
+# Create a DataFrame for easier plotting
+metrics_df = pd.DataFrame({
+    'Accuracy': Prediction_Accuracy,
+    'Recall': Prediction_Recall,
+    'AUC Score': Prediction_AUC,
+    'F1 Score': Prediction_f1_score
+}).T
+
+# Print the DataFrame to check its structure and contents
+print("Metrics DataFrame:")
+print(metrics_df)
+
+
+
+
+# Plotting function for each metric
+def plot_metric(metric_name, color):
+    if metric_name in metrics_df.columns:
+        plt.figure(figsize=(12, 8))
+        plt.barh(metrics_df.index, metrics_df[metric_name], color=color, edgecolor='k')
+        plt.title(f'{metric_name} Comparison')
+        plt.xlabel(metric_name)
+        plt.show()
+    else:
+        print(f"Metric '{metric_name}' not found in the DataFrame.")
+
+# Plot Accuracy
+plot_metric('Accuracy', 'lightblue')
+
+# Plot Recall
+plot_metric('Recall', 'lightcoral')
+
+# Plot AUC Score
+plot_metric('AUC Score', 'skyblue')
+
+# Plot F1 Score
+plot_metric('F1 Score', 'lightgreen')
+
+# Display the metrics in tabular format
+print("\nSummary of Metrics for All Models:")
+print(metrics_df)
+
+
+
+import pickle
+import pandas as pd
+
+# Function to load and combine model scores from pickle files
+def load_model_scores(file_paths):
+    model_scores = {}
+    for file_path in file_paths:
+        try:
+            with open(file_path, 'rb') as f:
+                model_scores.update(pickle.load(f))
+        except FileNotFoundError:
+            print(f"The file '{file_path}' was not found. Please check the path and try again.")
+    return model_scores
+
+# Define the paths to the pickle files
+file_paths = [
+    'model_scores_lr_nb_dt_mlp.pkl',
+    'model_scores_rf.pkl',
+    'model_scores_svm.pkl',
+    'model_scores_xgb.pkl'
+]
+
+# Load and combine all model scores
+combined_model_scores = load_model_scores(file_paths)
+
+# Extract metrics for plotting
+metrics = {
+    'Accuracy': {},
+    'Recall': {},
+    'AUC Score': {},
+    'F1 Score': {}
+}
+
+# Extract metrics from combined_model_scores
+for model_name, metrics_dict in combined_model_scores.items():
+    for metric in metrics.keys():
+        metrics[metric][model_name] = metrics_dict.get(metric, None)
+
+# Create a DataFrame for easier plotting
+metrics_df = pd.DataFrame(metrics)
+
+
+
+
+
+### Recall Score
+
+# Plot Recall Score
+plot_metric('Recall', 'Recall Comparison', 'Recall (%)')
+
+
+# Plot F1 Score
+plot_metric('F1 Score', 'F1 Score Comparison', 'F1 Score (%)')
+
+
+
+# Plot AUC Score
+plot_metric('AUC Score', 'AUC Score Comparison', 'AUC Score (%)')
+
+
+
+import matplotlib.pyplot as plt
+
+def plot_accuracy():
+    if 'Accuracy' in metrics_df.columns:
+        plt.figure(figsize=(12, 8))
+        
+        # Define colors for each classifier
+        colors = ['lightblue', 'lightcoral', 'skyblue', 'lightgreen']
+        
+        # Plot bars for each classifier with different colors
+        bars = plt.barh(metrics_df.index, metrics_df['Accuracy'], color=colors, edgecolor='k')
+        
+        # Add a legend
+        plt.legend(bars, metrics_df.index, title="Classifiers", bbox_to_anchor=(1.05, 1), loc='upper left')
+        
+        plt.title('Accuracy Comparison')
+        plt.xlabel('Accuracy')
+        plt.ylabel('Classifiers')
+        plt.tight_layout()
+        plt.show()
+    else:
+        print("Metric 'Accuracy' not found in the DataFrame.")
+
+# Plot Accuracy
+plot_accuracy()
+
+
+
+### ROC Curve
+
+
+import pickle
+import numpy as np
+import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
+from sklearn.metrics import (accuracy_score, recall_score, roc_auc_score, 
+                             precision_score, f1_score, confusion_matrix, 
+                             classification_report, roc_curve, auc)
+
+# Function to load and combine model scores from pickle files
+def load_model_scores(file_paths):
+    model_scores = {}
+    for file_path in file_paths:
+        try:
+            with open(file_path, 'rb') as f:
+                model_scores.update(pickle.load(f))
+        except FileNotFoundError:
+            print(f"The file '{file_path}' was not found. Please check the path and try again.")
+    return model_scores
+
+# Define the paths to the pickle files
+file_paths = [
+    'model_scores_lr_nb_dt_mlp.pkl',
+    'model_scores_rf.pkl',
+    'model_scores_svm.pkl',
+    'model_scores_xgb.pkl'
+]
+
+# Load and combine all model scores
+combined_model_scores = load_model_scores(file_paths)
+
+# Assuming that each entry in the combined_model_scores contains:
+# - 'true_labels': The true labels
+# - 'predicted_labels': The predicted labels from the model
+# - 'predicted_probabilities': The predicted probabilities from the model (for ROC AUC)
+
+# Extract relevant data
+true_labels = combined_model_scores.get('true_labels', None)
+model_predictions = {model_name: metrics.get('predicted_labels', None) for model_name, metrics in combined_model_scores.items() if 'predicted_labels' in metrics}
+model_probabilities = {model_name: metrics.get('predicted_probabilities', None) for model_name, metrics in combined_model_scores.items() if 'predicted_probabilities' in metrics}
+
+# Calculate and print metrics for each model
+for model_name in model_predictions:
+    predictions = model_predictions[model_name]
+    probabilities = model_probabilities.get(model_name, None)
+
+    # Metrics calculations
+    accuracy = accuracy_score(true_labels, predictions)
+    recall = recall_score(true_labels, predictions)
+    auc_score = roc_auc_score(true_labels, probabilities) if probabilities is not None else None
+    precision = precision_score(true_labels, predictions)
+    f1 = f1_score(true_labels, predictions)
+    cm = confusion_matrix(true_labels, predictions)
+    class_report = classification_report(true_labels, predictions)
+    
+    # Print metrics
+    print(f"\nModel: {model_name}")
+    print(f"Accuracy: {accuracy:.4%}")
+    print(f"Recall: {recall:.4f}")
+    print(f"ROC AUC: {auc_score:.4f}" if auc_score is not None else "ROC AUC: Not available")
+    print(f"Precision: {precision:.4f}")
+    print(f"F1 Score: {f1:.4f}")
+    print("Confusion Matrix:")
+    print(cm)
+    print("Classification Report:")
+    print(class_report)
+
+    # Convert confusion matrix to DataFrame for better visualization
+    cm_df = pd.DataFrame(cm, index=['True Normal', 'True Fraud'], columns=['Prediction Normal', 'Prediction Fraud'])
+    
+    # Plot confusion matrix
+    plt.figure(figsize=(8, 6))
+    sns.heatmap(cm_df, annot=True, fmt='g', cmap='Blues', annot_kws={"size": 16})
+    plt.title(f'Confusion Matrix for {model_name}')
+    plt.show()
+
+
+### Evaluate Metrics
+import pickle
+
+# Function to load and combine model scores from pickle files
+def load_model_scores(file_paths):
+    model_scores = {}
+    for file_path in file_paths:
+        try:
+            with open(file_path, 'rb') as f:
+                model_scores.update(pickle.load(f))
+        except FileNotFoundError:
+            print(f"The file '{file_path}' was not found. Please check the path and try again.")
+    return model_scores
+
+# Define the paths to the pickle files
+file_paths = [
+    'model_scores_lr_nb_dt_mlp.pkl',
+    'model_scores_rf.pkl',
+    'model_scores_svm.pkl',
+    'model_scores_xgb.pkl'
+]
+
+# Load and combine all model scores
+combined_model_scores = load_model_scores(file_paths)
+
+
+
+
+
+import pickle
+
+# Function to load and combine model scores from pickle files
+def load_model_scores(file_paths):
+    model_scores = {}
+    for file_path in file_paths:
+        try:
+            with open(file_path, 'rb') as f:
+                model_scores.update(pickle.load(f))
+        except FileNotFoundError:
+            print(f"The file '{file_path}' was not found. Please check the path and try again.")
+    return model_scores
+
+# Define the paths to the pickle files
+file_paths = [
+    'model_scores_lr_nb_dt_mlp.pkl',
+    'model_scores_rf.pkl',
+    'model_scores_svm.pkl',
+    'model_scores_xgb.pkl'
+]
+
+# Load and combine all model scores
+combined_model_scores = load_model_scores(file_paths)
+
+
+import pickle
+
+# Function to load and combine model scores from pickle files
+def load_model_scores(file_paths):
+    model_scores = {}
+    for file_path in file_paths:
+        try:
+            with open(file_path, 'rb') as f:
+                model_scores.update(pickle.load(f))
+        except FileNotFoundError:
+            print(f"The file '{file_path}' was not found. Please check the path and try again.")
+    return model_scores
+
+# Define the paths to the pickle files
+file_paths = [
+    'model_scores_lr_nb_dt_mlp.pkl',
+    'model_scores_rf.pkl',
+    'model_scores_svm.pkl',
+    'model_scores_xgb.pkl'
+]
+
+# Load and combine all model scores
+combined_model_scores = load_model_scores(file_paths)
+
+
+
+
+# import matplotlib.pyplot as plt
+# import seaborn as sns
+
+# # Initialize dictionaries to store the performance metrics for all models
+# Prediction_Accuracy = {}
+# Prediction_Recall = {}
+# Prediction_AUC = {}
+# Prediction_f1_score = {}
+
+# # Extract metrics from model_scores dictionary
+# for model_name, metrics in combined_model_scores.items():
+#     Prediction_Accuracy[model_name] = metrics['Accuracy']
+#     Prediction_Recall[model_name] = metrics['Recall']
+#     Prediction_AUC[model_name] = metrics['AUC Score']
+#     Prediction_f1_score[model_name] = metrics['F1 Score']
+
+# # Display the prediction accuracy for all models
+# print("Prediction Accuracy for All Models:")
+# for model, accuracy in Prediction_Accuracy.items():
+#     print(f"{model}: {accuracy:.4f}")
+
+# # Plot AUC Score
+# plt.figure(figsize=(10, 6))
+# plt.title('AUC Score Comparison')
+# plt.barh(range(len(Prediction_AUC)), list(Prediction_AUC.values()), align='center', color='skyblue')
+# plt.yticks(range(len(Prediction_AUC)), list(Prediction_AUC.keys()))
+# plt.xlabel('AUC Score')
+# plt.show()
+
+# # Plot F1 Score
+# plt.figure(figsize=(10, 6))
+# plt.title('F1 Score Comparison')
+# plt.barh(range(len(Prediction_f1_score)), list(Prediction_f1_score.values()), align='center', color='lightgreen')
+# plt.yticks(range(len(Prediction_f1_score)), list(Prediction_f1_score.keys()))
+# plt.xlabel('F1 Score')
+# plt.show()
+
+# # Plot Recall
+# plt.figure(figsize=(10, 6))
+# plt.title('Recall Score Comparison')
+# plt.barh(range(len(Prediction_Recall)), list(Prediction_Recall.values()), align='center', color='lightcoral')
+# plt.yticks(range(len(Prediction_Recall)), list(Prediction_Recall.keys()))
+# plt.xlabel('Recall Score')
+# plt.show()
+
+# # Plot Accuracy
+# plt.figure(figsize=(10, 6))
+# plt.title('Accuracy Comparison')
+# plt.barh(range(len(Prediction_Accuracy)), list(Prediction_Accuracy.values()), align='center', color='lightblue')
+# plt.yticks(range(len(Prediction_Accuracy)), list(Prediction_Accuracy.keys()))
+# plt.xlabel('Accuracy')
+# plt.show()
+
+# # Display the metrics in tabular format (optional for better analysis)
+# import pandas as pd
+
+# metrics_df = pd.DataFrame({
+#     'Accuracy': Prediction_Accuracy,
+#     'Recall': Prediction_Recall,
+#     'AUC Score': Prediction_AUC,
+#     'F1 Score': Prediction_f1_score
+# }).T
+
+# print("\nSummary of Metrics for All Models:")
+# print(metrics_df)
+
+
+
+
+
+
+
+
+
+### Evaluate Metrics
+
+
+
